@@ -1221,6 +1221,8 @@ function restoreLastValues() {
 }
 
 let jsonpCounter = 0;
+let loadTimeout = null;
+
 function loadReferenceData() {
   // СНАЧАЛА пробуем загрузить из кэша
   const cached = loadData();
@@ -1230,9 +1232,26 @@ function loadReferenceData() {
     buildCargoFields(barges);
   }
   
-  // Затем загружаем свежие данные из сети
+  // Затем загружаем свежие данные из сети с таймаутом 15 секунд
   const cb = 'jsonp_cb_' + (++jsonpCounter) + '_' + Date.now();
+  
+  // Таймаут: если данные не загрузились за 15 секунд, используем кэш
+  loadTimeout = setTimeout(() => {
+    console.log('⏱️ Таймаут загрузки данных, используем кэш');
+    toast('⚠️ Медленная сеть, используем сохранённые данные');
+    if (currentShip) {
+      populateSelects(loadData());
+      const barges = loadData().ship_barges && loadData().ship_barges[currentShip.ship] ? loadData().ship_barges[currentShip.ship] : [];
+      buildCargoFields(barges);
+    }
+    updateNetworkStatus();
+    delete window[cb];
+    const s = document.getElementById('jsonp_script');
+    if (s) s.remove();
+  }, 15000); // 15 секунд
+  
   window[cb] = function(data) {
+    clearTimeout(loadTimeout); // Отменяем таймаут
     saveData(data);
     if (currentShip) {
       populateSelects(data);
@@ -1247,10 +1266,13 @@ function loadReferenceData() {
     const s = document.getElementById('jsonp_script');
     if (s) s.remove();
   };
+  
   const script = document.createElement('script');
   script.id = 'jsonp_script';
   script.src = API_URL + '?callback=' + cb;
   script.onerror = function() {
+    clearTimeout(loadTimeout);
+    console.log('❌ Ошибка загрузки данных, используем кэш');
     if (currentShip) {
       populateSelects(loadData());
       const barges = loadData().ship_barges && loadData().ship_barges[currentShip.ship] ? loadData().ship_barges[currentShip.ship] : [];
@@ -1259,8 +1281,10 @@ function loadReferenceData() {
     updateNetworkStatus();
     delete window[cb];
   };
+  
   document.body.appendChild(script);
 }
+  
 function populateSelects(data) {
   const loading = document.getElementById('loading');
   if (loading) loading.style.display = 'none';
@@ -1544,19 +1568,6 @@ document.getElementById('recovery_modal').addEventListener('click', (e) => {
     e.currentTarget.classList.add('hidden');
   }
 });
-
-// === РЕГИСТРАЦИЯ SERVICE WORKER ===
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js')
-      .then(reg => {
-        console.log('✅ Service Worker зарегистрирован:', reg.scope);
-      })
-      .catch(err => {
-        console.log('❌ Ошибка регистрации Service Worker:', err);
-      });
-  });
-}
 
 </script>
 </body>
