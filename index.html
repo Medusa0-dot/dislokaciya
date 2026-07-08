@@ -1254,6 +1254,8 @@ function loadReferenceData() {
     if (currentShip) {
       const barges = cached.ship_barges && cached.ship_barges[currentShip.ship] ? cached.ship_barges[currentShip.ship] : [];
       buildCargoFields(barges);
+      // ВАЖНО: восстанавливаем значения ПОСЛЕ создания полей
+      restoreLastValues();
     }
   }
   
@@ -1262,11 +1264,12 @@ function loadReferenceData() {
   
   window[cb] = function(data) {
     saveData(data);
-    // ВАЖНО: вызываем populateSelects ВСЕГДА, не только если currentShip установлен
     populateSelects(data);
     if (currentShip) {
       const barges = data.ship_barges && data.ship_barges[currentShip.ship] ? data.ship_barges[currentShip.ship] : [];
       buildCargoFields(barges);
+      // ВАЖНО: восстанавливаем значения ПОСЛЕ создания полей
+      restoreLastValues();
     }
     updateNetworkStatus();
     delete window[cb];
@@ -1305,8 +1308,6 @@ function populateSelects(data) {
   const bs = document.getElementById('basin');
   bs.innerHTML = '<option value="">— Выберите бассейн —</option>';
   Object.keys(data.basins || {}).sort().forEach(b => bs.appendChild(new Option(b, b)));
-
-  restoreLastValues();
 }
 
 document.getElementById('basin').addEventListener('change', function() {
