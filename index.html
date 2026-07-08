@@ -1221,45 +1221,28 @@ function restoreLastValues() {
 }
 
 let jsonpCounter = 0;
-let loadTimeout = null;
 
 function loadReferenceData() {
-  // СНАЧАЛА пробуем загрузить из кэша
+  // СНАЧАЛА загружаем из кэша (если есть)
   const cached = loadData();
-  if (cached && currentShip) {
+  if (cached) {
     populateSelects(cached);
-    const barges = cached.ship_barges && cached.ship_barges[currentShip.ship] ? cached.ship_barges[currentShip.ship] : [];
-    buildCargoFields(barges);
-  }
-  
-  // Затем загружаем свежие данные из сети с таймаутом 15 секунд
-  const cb = 'jsonp_cb_' + (++jsonpCounter) + '_' + Date.now();
-  
-  // Таймаут: если данные не загрузились за 15 секунд, используем кэш
-  loadTimeout = setTimeout(() => {
-    console.log('⏱️ Таймаут загрузки данных, используем кэш');
-    toast('⚠️ Медленная сеть, используем сохранённые данные');
     if (currentShip) {
-      populateSelects(loadData());
-      const barges = loadData().ship_barges && loadData().ship_barges[currentShip.ship] ? loadData().ship_barges[currentShip.ship] : [];
+      const barges = cached.ship_barges && cached.ship_barges[currentShip.ship] ? cached.ship_barges[currentShip.ship] : [];
       buildCargoFields(barges);
     }
-    updateNetworkStatus();
-    delete window[cb];
-    const s = document.getElementById('jsonp_script');
-    if (s) s.remove();
-  }, 15000); // 15 секунд
+  }
+  
+  // Затем загружаем свежие данные из сети
+  const cb = 'jsonp_cb_' + (++jsonpCounter) + '_' + Date.now();
   
   window[cb] = function(data) {
-    clearTimeout(loadTimeout); // Отменяем таймаут
     saveData(data);
+    // ВАЖНО: вызываем populateSelects ВСЕГДА, не только если currentShip установлен
+    populateSelects(data);
     if (currentShip) {
-      populateSelects(data);
       const barges = data.ship_barges && data.ship_barges[currentShip.ship] ? data.ship_barges[currentShip.ship] : [];
       buildCargoFields(barges);
-    } else {
-      const loading = document.getElementById('loading');
-      if (loading) loading.style.display = 'none';
     }
     updateNetworkStatus();
     delete window[cb];
@@ -1271,15 +1254,11 @@ function loadReferenceData() {
   script.id = 'jsonp_script';
   script.src = API_URL + '?callback=' + cb;
   script.onerror = function() {
-    clearTimeout(loadTimeout);
-    console.log('❌ Ошибка загрузки данных, используем кэш');
-    if (currentShip) {
-      populateSelects(loadData());
-      const barges = loadData().ship_barges && loadData().ship_barges[currentShip.ship] ? loadData().ship_barges[currentShip.ship] : [];
-      buildCargoFields(barges);
-    }
+    console.log('❌ Ошибка загрузки данных');
     updateNetworkStatus();
     delete window[cb];
+    const s = document.getElementById('jsonp_script');
+    if (s) s.remove();
   };
   
   document.body.appendChild(script);
