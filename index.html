@@ -1180,6 +1180,22 @@ function saveLastValues() {
     const el = document.querySelector(`[name="${f}"]`);
     if (el) v[f] = el.value;
   });
+  
+  // Сохраняем данные барж
+  if (currentShip) {
+    const data = loadData();
+    const barges = data.ship_barges && data.ship_barges[currentShip.ship] ? data.ship_barges[currentShip.ship] : [];
+    barges.forEach(barge => {
+      const cargoType = document.querySelector(`[name="cargo_type_${barge}"]`);
+      const cargoAmount = document.querySelector(`[name="cargo_amount_${barge}"]`);
+      const draftCm = document.querySelector(`[name="draft_cm_${barge}"]`);
+      
+      if (cargoType) v[`cargo_type_${barge}`] = cargoType.value;
+      if (cargoAmount) v[`cargo_amount_${barge}`] = cargoAmount.value;
+      if (draftCm) v[`draft_cm_${barge}`] = draftCm.value;
+    });
+  }
+  
   localStorage.setItem('podacha_last_v13', JSON.stringify(v));
 }
 
@@ -1204,15 +1220,23 @@ function restoreLastValues() {
         }
       });
       
-      // Восстанавливаем род груза для барж (если есть)
+      // Восстанавливаем данные барж
       if (currentShip) {
         const data = loadData();
         const barges = data.ship_barges && data.ship_barges[currentShip.ship] ? data.ship_barges[currentShip.ship] : [];
         barges.forEach(barge => {
-          const el = document.querySelector(`[name="cargo_type_${barge}"]`);
-          if (el && v.cargo_type) {
-            // Для барж сохраняем общий род груза (упрощённо)
-            setSelectValue(el, v.cargo_type);
+          const cargoType = document.querySelector(`[name="cargo_type_${barge}"]`);
+          const cargoAmount = document.querySelector(`[name="cargo_amount_${barge}"]`);
+          const draftCm = document.querySelector(`[name="draft_cm_${barge}"]`);
+          
+          if (cargoType && v[`cargo_type_${barge}`]) {
+            setSelectValue(cargoType, v[`cargo_type_${barge}`]);
+          }
+          if (cargoAmount && v[`cargo_amount_${barge}`]) {
+            cargoAmount.value = v[`cargo_amount_${barge}`];
+          }
+          if (draftCm && v[`draft_cm_${barge}`]) {
+            draftCm.value = v[`draft_cm_${barge}`];
           }
         });
       }
