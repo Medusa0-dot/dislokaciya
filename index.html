@@ -1346,8 +1346,9 @@ document.getElementById('form').addEventListener('submit', (e) => {
   });
   
   // Также проверяем капитана (он вне формы)
-  const captainValue = document.getElementById('captain').value;
-  if (captain && !captain.value) {
+  const captain = document.getElementById('captain');
+  const captainValue = captain.value;
+  if (captain && !captainValue) {
     captain.classList.add('field-error');
     hasError = true;
   }
@@ -1424,9 +1425,6 @@ const commonData = {
       draft_cm: parseDecimal(fd.get('draft_cm'))
     });
   }
-
-  saveQueue(q);
-  saveLastValues();
 
   saveQueue(q);
   saveLastValues();
@@ -1546,6 +1544,19 @@ document.getElementById('recovery_modal').addEventListener('click', (e) => {
     e.currentTarget.classList.add('hidden');
   }
 });
+
+// === РЕГИСТРАЦИЯ SERVICE WORKER ===
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js')
+      .then(reg => {
+        console.log('✅ Service Worker зарегистрирован:', reg.scope);
+      })
+      .catch(err => {
+        console.log('❌ Ошибка регистрации Service Worker:', err);
+      });
+  });
+}
 
 </script>
 </body>
