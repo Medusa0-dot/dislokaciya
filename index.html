@@ -434,18 +434,21 @@ body.dark-theme .logo-dark { display: block; }
   color: #2c3e50;
 }
 
-  /* Исправление для datetime-local на iOS */
+/* Исправление для datetime-local на iOS */
 input[type="datetime-local"] {
   max-width: 100% !important;
   box-sizing: border-box !important;
   -webkit-appearance: none;
   appearance: none;
+  min-height: 45px !important;
+  line-height: 1.5 !important;
 }
 
 @media (max-width: 768px) {
   input[type="datetime-local"] {
     font-size: 14px !important;
     padding: 10px 12px !important;
+    min-height: 42px !important;
   }
 }
   
