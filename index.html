@@ -1960,12 +1960,22 @@ function updateDropdown(query, options, dropdown, input) {
       div.className = 'searchable-option';
       if (opt === input.value) div.classList.add('selected');
       div.textContent = opt;
+      
+      // Обработка клика
       div.addEventListener('click', () => {
         input.value = opt;
+        
+        // === ЗАКРЫВАЕМ СПИСОК ===
         dropdown.classList.remove('show');
+        
+        // Убираем фокус с поля (дополнительно закрывает список)
+        input.blur();
+        
         // Триггерим событие для зависимых полей
         input.dispatchEvent(new Event('input'));
+        input.dispatchEvent(new Event('change'));
       });
+      
       dropdown.appendChild(div);
     });
   }
