@@ -87,6 +87,17 @@ async function sendQueuedData() {
       requireInteraction: false
     });
   }
+  
+  // === СИНХРОНИЗАЦИЯ С ОСНОВНОЙ СТРАНИЦЕЙ ===
+  // Сообщаем основной странице, сколько записей отправлено
+  self.clients.matchAll().then(clients => {
+    clients.forEach(client => {
+      client.postMessage({ 
+        type: 'sync-complete', 
+        sentCount: sentCount 
+      });
+    });
+  });
 }
 
 // === Вспомогательные функции для IndexedDB ===
@@ -157,3 +168,4 @@ self.addEventListener('notificationclick', (event) => {
     })
   );
 });
+
