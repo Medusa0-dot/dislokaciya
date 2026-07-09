@@ -1,0 +1,16 @@
+{
+  "name": "Дислокация - Волго-Балтийский Флот",
+  "short_name": "Дислокация ВБФ",
+  "description": "Система дислокации судов",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f5f9fc",
+  "theme_color": "#1e88c7",
+  "icons": [
+    {
+      "src": "logo.png",
+      "sizes": "any",
+      "type": "image/png"
+    }
+  ]
+}
