@@ -1962,18 +1962,27 @@ function updateDropdown(query, options, dropdown, input) {
       div.textContent = opt;
       
       // Обработка клика
-      div.addEventListener('click', () => {
+      div.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
         input.value = opt;
         
         // === ЗАКРЫВАЕМ СПИСОК ===
         dropdown.classList.remove('show');
         
-        // Убираем фокус с поля (дополнительно закрывает список)
+        // === УБИРАЕМ ФОКУС ===
         input.blur();
         
-        // Триггерим событие для зависимых полей
-        input.dispatchEvent(new Event('input'));
-        input.dispatchEvent(new Event('change'));
+        // === ДЛЯ МОБИЛЬНЫХ: скрываем клавиатуру ===
+        input.setAttribute('readonly', 'readonly');
+        setTimeout(() => {
+          input.removeAttribute('readonly');
+        }, 100);
+        
+        // Триггерим события
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.dispatchEvent(new Event('change', { bubbles: true }));
       });
       
       dropdown.appendChild(div);
