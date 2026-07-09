@@ -1195,7 +1195,7 @@ const FALLBACK_DATA = {
 };
 
 let currentShip = null;
-let isSelectingValue = false; // Флаг: идет ли выбор значения
+let isSelectingValue = false; // Флаг блокировки списка
 
 function loadQueue() { try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch { return []; } }
 function saveQueue(q) { localStorage.setItem(STORAGE_KEY, JSON.stringify(q)); }
