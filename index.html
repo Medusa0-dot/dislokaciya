@@ -1985,7 +1985,7 @@ function initSearchableSelects(data) {
   initSearchableSelect('status', 'status_dropdown', statusOptions);
 }
   
-  // === РЕГИСТРАЦИЯ SERVICE WORKER ===
+// === РЕГИСТРАЦИЯ SERVICE WORKER ===
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('./sw.js')
     .then(reg => {
@@ -2001,6 +2001,21 @@ if ('serviceWorker' in navigator) {
       }
     })
     .catch(err => console.log('❌ Ошибка Service Worker:', err));
+  
+  // === СЛУШАЕМ СООБЩЕНИЯ ОТ SERVICE WORKER ===
+  navigator.serviceWorker.addEventListener('message', (event) => {
+    if (event.data && event.data.type === 'sync-complete') {
+      console.log('📨 Получено сообщение от SW: отправлено', event.data.sentCount);
+      
+      // Очищаем localStorage от отправленных записей
+      const q = loadQueue();
+      const remaining = q.slice(event.data.sentCount);
+      saveQueue(remaining);
+      renderQueue();
+      
+      toast(`✅ Отправлено в фоне: ${event.data.sentCount}`);
+    }
+  });
 }
 </script>
 </body>
