@@ -135,7 +135,7 @@ body.dark-theme .logo-dark { display: block; }
 .status.syncing { background: #e3f2fd; color: #1e88c7; }
 .status.syncing::before { background: #1e88c7; }
 
-@keyframes pulse {
+@keyframes pulse {  
   0%, 100% { opacity: 1; }
   50% { opacity: 0.4; }
 }
@@ -1879,9 +1879,50 @@ document.getElementById('recovery_modal').addEventListener('click', (e) => {
 });
 
 // === КАСТОМНЫЙ ПОИСК С ВЫПАДАЮЩИМ СПИСКОМ ===
-function initSearchableSelect
+function initSearchableSelect(inputId, dropdownId, options) {
+  const input = document.getElementById(inputId);
+  const dropdown = document.getElementById(dropdownId);
+  
+  if (!input || !dropdown) {
+    console.error(`Не найдены элементы: ${inputId}, ${dropdownId}`);
+    return;
+  }
+  
+  // Помечаем, что уже инициализировано
+  if (input.dataset.searchableInit) return;
+  input.dataset.searchableInit = 'true';
+  
+  console.log(`Инициализация поиска для ${inputId}, опций: ${options.length}`);
+  
+  // Показываем список при фокусе
+  input.addEventListener('focus', () => {
+    if (!isSelectingValue) {
+      updateDropdown(input.value, options, dropdown, input);
+    }
+  });
+  
+  // Фильтруем при вводе
+  input.addEventListener('input', () => {
+    if (!isSelectingValue) {
+      updateDropdown(input.value, options, dropdown, input);
+    }
+  });
+  
+  // Скрываем при клике вне (один раз для всех полей)
+  if (!window.searchableClickHandlerAdded) {
+    window.searchableClickHandlerAdded = true;
+    document.addEventListener('click', (e) => {
+      document.querySelectorAll('.searchable-dropdown.show').forEach(dd => {
+        const input = dd.previousElementSibling;
+        if (!dd.contains(e.target) && (!input || !input.contains(e.target))) {
+          dd.classList.remove('show');
+        }
+      });
+    });
+  }
+}
 
-  // Функция для обновления опций без пересоздания обработчиков
+// Функция для обновления опций без пересоздания обработчиков
 function updateSearchableOptions(inputId, dropdownId, newOptions) {
   const input = document.getElementById(inputId);
   const dropdown = document.getElementById(dropdownId);
@@ -1891,7 +1932,7 @@ function updateSearchableOptions(inputId, dropdownId, newOptions) {
   // Сохраняем текущее значение
   const currentValue = input.value;
   
-  // Сбрасываем флаг инициализации, чтобы можно было пересоздать
+  // Сбрасываем флаг инициализации
   delete input.dataset.searchableInit;
   
   // Удаляем старые обработчики (клонируем элемент)
@@ -1907,6 +1948,76 @@ function updateSearchableOptions(inputId, dropdownId, newOptions) {
   } else {
     newInput.value = '';
   }
+}
+
+function updateDropdown(query, options, dropdown, input) {
+  // Если идет выбор значения — не обновляем список
+  if (isSelectingValue) return;
+  
+  dropdown.innerHTML = '';
+  
+  const filtered = options.filter(opt => 
+    opt.toLowerCase().includes(query.toLowerCase())
+  );
+  
+  if (filtered.length === 0) {
+    dropdown.innerHTML = '<div class="searchable-no-results">Ничего не найдено</div>';
+  } else {
+    filtered.forEach(opt => {
+      const div = document.createElement('div');
+      div.className = 'searchable-option';
+      if (opt === input.value) div.classList.add('selected');
+      div.textContent = opt;
+      
+      // Обработка клика
+      div.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        // Устанавливаем флаг блокировки
+        isSelectingValue = true;
+        
+        input.value = opt;
+        
+        // Закрываем все списки
+        document.querySelectorAll('.searchable-dropdown.show').forEach(dd => {
+          dd.classList.remove('show');
+        });
+        
+        // Убираем фокус
+        if (document.activeElement === input) {
+          input.blur();
+        }
+        
+        // Триггерим события
+        setTimeout(() => {
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+          input.dispatchEvent(new Event('change', { bubbles: true }));
+          
+          // Снимаем флаг через 200мс
+          setTimeout(() => {
+            isSelectingValue = false;
+          }, 200);
+        }, 50);
+      });
+      
+      dropdown.appendChild(div);
+    });
+  }
+  
+  dropdown.classList.add('show');
+}
+
+// Инициализация после загрузки данных
+function initSearchableSelects(data) {
+  initSearchableSelect('client', 'client_dropdown', data.clients || []);
+  initSearchableSelect('departure', 'departure_dropdown', data.ports || []);
+  initSearchableSelect('destination', 'destination_dropdown', data.ports || []);
+  initSearchableSelect('basin', 'basin_dropdown', Object.keys(data.basins || {}).sort());
+  
+  // Статус (статичный список)
+  const statusOptions = ['в ходу', 'погрузка', 'выгрузка', 'остановка судна'];
+  initSearchableSelect('status', 'status_dropdown', statusOptions);
 }
   
 function updateDropdown(query, options, dropdown, input) {
