@@ -1198,6 +1198,32 @@ let currentShip = null;
 
 function loadQueue() { try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch { return []; } }
 function saveQueue(q) { localStorage.setItem(STORAGE_KEY, JSON.stringify(q)); }
+  // === IndexedDB для фоновой синхронизации ===
+function openIndexedDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open('dislokaciya-db', 1);
+    request.onupgradeneeded = (event) => {
+      const db = event.target.result;
+      if (!db.objectStoreNames.contains('queue')) {
+        db.createObjectStore('queue');
+      }
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+async function saveQueueToIndexedDB(queue) {
+  try {
+    const db = await openIndexedDB();
+    const tx = db.transaction('queue', 'readwrite');
+    const store = tx.objectStore('queue');
+    store.put(queue, 'queue-data');
+    console.log('✅ Очередь сохранена в IndexedDB');
+  } catch (err) {
+    console.log('❌ Ошибка сохранения в IndexedDB:', err);
+  }
+}
 function loadData() { try { return JSON.parse(localStorage.getItem(DATA_STORAGE_KEY)) || FALLBACK_DATA; } catch { return FALLBACK_DATA; } }
 function saveData(d) { localStorage.setItem(DATA_STORAGE_KEY, JSON.stringify(d)); }
 
@@ -1564,17 +1590,50 @@ function submitViaForm(entry) {
   f.submit();
 }
 
-function syncQueue() {
+async function syncQueue() {
   const q = loadQueue();
   if (!q.length) return;
+  
   const s = document.getElementById('network_status');
   s.className = 'status syncing'; 
   s.innerHTML = '<span>Синхронизация...</span>';
-  q.forEach(i => submitViaForm(i));
+  
+  const API_URL = 'https://script.google.com/macros/s/AKfycbynX9Xf-tezSXdd3FfE8sT6W9bhl_d1tGytyGVtceLhkrOKppv8MO0B0DsjlwkYcVEw/exec';
+  let sentCount = 0;
+  
+  for (let i = 0; i < q.length; i++) {
+    try {
+      const formData = new FormData();
+      formData.append('data', JSON.stringify(q[i]));
+      
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        body: formData
+      });
+      
+      if (response.ok) {
+        sentCount++;
+      } else {
+        break;
+      }
+    } catch (err) {
+      break;
+    }
+  }
+  
+  if (sentCount > 0) {
+    const remaining = q.slice(sentCount);
+    saveQueue(remaining);
+    await saveQueueToIndexedDB(remaining);
+  }
+  
   setTimeout(() => {
-    saveQueue([]); renderQueue(); updateNetworkStatus();
-    toast(`✅ Отправлено: ${q.length}`);
-  }, 3000);
+    renderQueue(); 
+    updateNetworkStatus();
+    if (sentCount > 0) {
+      toast(`✅ Отправлено: ${sentCount}`);
+    }
+  }, 1000);
 }
 
 document.getElementById('form').addEventListener('submit', (e) => {
@@ -1678,6 +1737,19 @@ const commonData = {
   }
 
   saveQueue(q);
+    // Сохраняем в IndexedDB для Background Sync
+  await saveQueueToIndexedDB(q);
+  
+  // Регистрируем фоновую синхронизацию
+  if ('serviceWorker' in navigator && 'SyncManager' in window) {
+    try {
+      const registration = await navigator.serviceWorker.ready;
+      await registration.sync.register('sync-queue');
+      console.log('✅ Background Sync зарегистрирован');
+    } catch (err) {
+      console.log('❌ Ошибка регистрации sync:', err);
+    }
+  }
   saveLastValues();
 
   // НЕ сбрасываем форму — оставляем все поля заполненными
@@ -1706,7 +1778,16 @@ window.addEventListener('online', () => {
   const s = document.getElementById('network_status');
   s.className = 'status syncing';
   s.innerHTML = '<span>Синхронизация...</span>';
-  syncQueue(); loadReferenceData();
+  
+  // Пробуем Background Sync
+  if ('serviceWorker' in navigator && 'SyncManager' in window) {
+    navigator.serviceWorker.ready.then(registration => {
+      registration.sync.register('sync-queue');
+    });
+  }
+  
+  syncQueue(); 
+  loadReferenceData();
 });
 window.addEventListener('offline', () => {
   const s = document.getElementById('network_status');
@@ -1873,6 +1954,24 @@ function initSearchableSelects(data) {
   // Статус (статичный список)
   const statusOptions = ['в ходу', 'погрузка', 'выгрузка', 'остановка судна'];
   initSearchableSelect('status', 'status_dropdown', statusOptions);
+}
+  
+  // === РЕГИСТРАЦИЯ SERVICE WORKER ===
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js')
+    .then(reg => {
+      console.log('✅ Service Worker зарегистрирован');
+      
+      // Запрашиваем разрешение на уведомления
+      if ('Notification' in window && Notification.permission === 'default') {
+        Notification.requestPermission().then(permission => {
+          if (permission === 'granted') {
+            console.log('✅ Уведомления разрешены');
+          }
+        });
+      }
+    })
+    .catch(err => console.log('❌ Ошибка Service Worker:', err));
 }
 </script>
 </body>
