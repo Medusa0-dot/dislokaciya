@@ -1968,21 +1968,28 @@ function updateDropdown(query, options, dropdown, input) {
         
         input.value = opt;
         
-        // === ЗАКРЫВАЕМ СПИСОК ===
-        dropdown.classList.remove('show');
+        // === ЗАКРЫВАЕМ ВСЕ СПИСКИ ===
+        document.querySelectorAll('.searchable-dropdown.show').forEach(dd => {
+          dd.classList.remove('show');
+        });
         
-        // === УБИРАЕМ ФОКУС ===
-        input.blur();
+        // === УБИРАЕМ ФОКУС С ПОЛЯ ===
+        if (document.activeElement === input) {
+          input.blur();
+        }
         
-        // === ДЛЯ МОБИЛЬНЫХ: скрываем клавиатуру ===
-        input.setAttribute('readonly', 'readonly');
+        // === БЛОКИРУЕМ ПОЛЕ НА КОРОТКОЕ ВРЕМЯ ===
+        input.disabled = true;
         setTimeout(() => {
-          input.removeAttribute('readonly');
-        }, 100);
+          input.disabled = false;
+          // После включения фокус не вернется
+        }, 50);
         
         // Триггерим события
-        input.dispatchEvent(new Event('input', { bubbles: true }));
-        input.dispatchEvent(new Event('change', { bubbles: true }));
+        setTimeout(() => {
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+          input.dispatchEvent(new Event('change', { bubbles: true }));
+        }, 100);
       });
       
       dropdown.appendChild(div);
