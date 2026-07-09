@@ -1558,8 +1558,8 @@ document.getElementById('basin').addEventListener('input', function() {
     landmarkInput.disabled = false;
     landmarkInput.placeholder = 'Начните вводить...';
     
-    // Инициализируем поиск для ориентиров
-    initSearchableSelect('landmark', 'landmark_dropdown', landmarks);
+    // Используем updateSearchableOptions вместо initSearchableSelect
+    updateSearchableOptions('landmark', 'landmark_dropdown', landmarks);
   } else {
     landmarkInput.disabled = true;
     landmarkInput.placeholder = 'Сначала выберите бассейн';
@@ -1916,6 +1916,35 @@ function initSearchableSelect(inputId, dropdownId, options) {
     });
   }
 }
+
+  // Функция для обновления опций без пересоздания обработчиков
+function updateSearchableOptions(inputId, dropdownId, newOptions) {
+  const input = document.getElementById(inputId);
+  const dropdown = document.getElementById(dropdownId);
+  
+  if (!input || !dropdown) return;
+  
+  // Сохраняем текущее значение
+  const currentValue = input.value;
+  
+  // Сбрасываем флаг инициализации, чтобы можно было пересоздать
+  delete input.dataset.searchableInit;
+  
+  // Удаляем старые обработчики (клонируем элемент)
+  const newInput = input.cloneNode(true);
+  input.parentNode.replaceChild(newInput, input);
+  
+  // Переинициализируем с новыми опциями
+  initSearchableSelect(inputId, dropdownId, newOptions);
+  
+  // Восстанавливаем значение если оно есть в новых опциях
+  if (newOptions.includes(currentValue)) {
+    newInput.value = currentValue;
+  } else {
+    newInput.value = '';
+  }
+}
+  
 function updateDropdown(query, options, dropdown, input) {
   dropdown.innerHTML = '';
   
